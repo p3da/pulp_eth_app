@@ -10,6 +10,7 @@
 
 
 #define BUFFER_SIZE_MAX 256
+#define RX_BUFFER_SIZE_MAX 1024
 #define PER_ID_ETH_FRAME 17
 
 // first address of the udma config registers for the udma peripheral "eth_frame"
@@ -28,16 +29,22 @@
 #define UDMA_REG_ETH_FRAME_OFFS_TX_SIZE  0x14
 #define UDMA_REG_ETH_FRAME_OFFS_TX_CFG   0x18
 
+#define UDMA_REG_ETH_FRAME_OFFS_RX_FIFO_CFG   0x1C
+#define UDMA_REG_ETH_FRAME_OFFS_RX_FIFO_N  0x20
+
 
 uint32_t tx_buffer_size;
-uint8_t tx_buffer[BUFFER_SIZE_MAX];
+uint16_t tx_buffer[BUFFER_SIZE_MAX];
+
+uint32_t rx_buffer_size;
+uint16_t rx_buffer[RX_BUFFER_SIZE_MAX];
 
 int __rt_fpga_fc_frequency = 20000000;
 int __rt_fpga_periph_frequency = 10000000;
 
-const uint8_t src_mac[] = {0x20, 0x00, 0x00, 0x00, 0x00, 0x00 };
-const uint8_t dst_mac[] = {0xf0, 0x00, 0x00, 0x00, 0x00, 0x00 };
-const uint8_t eth_type[] = {0x08, 0x00};
+const uint16_t src_mac[] = {0x20, 0x00, 0x00, 0x00, 0x00, 0x00 };
+const uint16_t dst_mac[] = {0xf0, 0x00, 0x00, 0x00, 0x00, 0x00 };
+const uint16_t eth_type[] = {0x08, 0x00};
 
 /**
  * this function was initially used for debugging purposes
@@ -86,11 +93,18 @@ void init_tx_buffer() {
     tx_buffer[i] = i;
   }
 
+
   tx_buffer_size = 32;
-  // /* debug output; print buffer to uart */
-  // for (int j = 0; j < 32; j++) {
-  //   printf("tx_buffer[%d] = 0x%02X\n", j, tx_buffer[j]);
-  // }
+
+
+  /* set bit 9 of last entry in tx_buffer to signal the end of the frame */
+  tx_buffer[tx_buffer_size-1] |= 0x0100;
+
+
+  /* debug output; print buffer to uart */
+  for (int j = 0; j < 32; j++) {
+    printf("tx_buffer[%d] = 0x%04X\n", j, tx_buffer[j]);
+  }
 }
 
 int main() {
@@ -121,7 +135,8 @@ int main() {
 
 
   /*  set number of bytes to transfer */
-  pulp_write32(UDMA_REG_ETH_FRAME_ADDR_FIRST + UDMA_REG_ETH_FRAME_OFFS_TX_SIZE, tx_buffer_size);
+  /* tx_buffer_size means word size (16 bit), therefore multiply by 2 */
+  pulp_write32(UDMA_REG_ETH_FRAME_ADDR_FIRST + UDMA_REG_ETH_FRAME_OFFS_TX_SIZE, tx_buffer_size<<1);
 
   /* TX_CFG register bits (see pulpissimo/doc/datasheet.pdf)
    * bit 0 - CONTINOUS(R/W) - not unused here
@@ -136,7 +151,54 @@ int main() {
   printf("tx transaction enqueued\n");
 
   /* wait until transfer has finished; poll the PENDING bit of TX_CFG register */
-  for(int i = 0; i< 1000000000; i++) asm volatile("nop");
+  //for(int i = 0; i< 1000000000; i++) asm volatile("nop");
+
+  uint32_t ef_fifo_cfg = 0;
+  uint32_t ef_fifo_n = 0;
+
+  uint32_t reg_rx_cfg = 0;
+
+  while (1) {
+    ef_fifo_cfg = pulp_read32(UDMA_REG_ETH_FRAME_ADDR_FIRST + UDMA_REG_ETH_FRAME_OFFS_RX_FIFO_CFG);
+
+    if ((ef_fifo_cfg>>2)&1) {
+      printf("TODO: fifo full ");
+    }
+
+    if ((ef_fifo_cfg>>1)&1) {
+      ef_fifo_n = pulp_read32(UDMA_REG_ETH_FRAME_ADDR_FIRST + UDMA_REG_ETH_FRAME_OFFS_RX_FIFO_N);
+
+      printf("end of frame received; size: %d\n", ef_fifo_n);
+
+      /* set start address for udma rx transaction */
+      pulp_write32(UDMA_REG_ETH_FRAME_ADDR_FIRST + UDMA_REG_ETH_FRAME_OFFS_RX_SADDR, (uint32_t)&rx_buffer);
+
+      /* set number of bytes to transfer from udma rx channel*/
+      pulp_write32(UDMA_REG_ETH_FRAME_ADDR_FIRST + UDMA_REG_ETH_FRAME_OFFS_RX_SIZE, ef_fifo_n);
+
+      /* enable rx channel */
+      pulp_write32(UDMA_REG_ETH_FRAME_ADDR_FIRST + UDMA_REG_ETH_FRAME_OFFS_RX_CFG, (1<<4));
+
+      /* busy wait until rx transaction finished */
+      /* first wait until the EN bit (=bit 4) in RX_CFG is 0 again. this means udma has started the transaction */
+      do {
+        reg_rx_cfg = pulp_read32(UDMA_REG_ETH_FRAME_ADDR_FIRST + UDMA_REG_ETH_FRAME_OFFS_RX_CFG);
+      } while ((reg_rx_cfg>>4) & 1);
+      printf("udma has started transaction");
+
+      /* second wait until the PENDING bit (=bit 4) in RX_CFG is 0 again. this means udma has finished the transaction */
+      do  {
+        reg_rx_cfg = pulp_read32(UDMA_REG_ETH_FRAME_ADDR_FIRST + UDMA_REG_ETH_FRAME_OFFS_RX_CFG);
+      } while((reg_rx_cfg>>5) & 1);
+      printf("udma has finished transaction");
+
+      /* debug output */
+      for (int i = 0; i < ef_fifo_n; i++) {
+        printf("rx_buffer[%d] = 0x%04X\n", i, rx_buffer[i]);
+      }
+    }
+  }
+
 
   return 0;
 }
