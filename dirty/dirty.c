@@ -147,8 +147,8 @@ uint8_t enqueue_udma_tx(void *tx_buffer, uint32_t size_bytes) {
   uint32_t reg_tx_bytes_left;
   reg_tx_bytes_left = pulp_read32(UDMA_REG_ETH_FRAME_ADDR_FIRST + UDMA_REG_ETH_FRAME_OFFS_TX_BYTES_LEFT);
   reg_tx_bytes = pulp_read32(UDMA_REG_ETH_FRAME_ADDR_FIRST + UDMA_REG_ETH_FRAME_OFFS_TX_BYTES);
-  printf("tx bytes %d\n\r", reg_tx_bytes);
-  printf("tx remaining bytes %d\n\r", reg_tx_bytes_left);
+  // printf("tx bytes %d\n\r", reg_tx_bytes);
+  // printf("tx remaining bytes %d\n\r", reg_tx_bytes_left);
 }
 
 uint8_t enqueue_udma_rx(void *rx_buffer, uint32_t size_bytes) {
@@ -174,15 +174,27 @@ void wait_udma_rx_done() {
   uint32_t reg_rx_cfg = 0;
   /* busy wait until rx transaction finished */
   /* first wait until the EN bit (=bit 4) in RX_CFG is 0 again. this means udma has started the transaction */
+  // do {
+  //   reg_rx_cfg = pulp_read32(UDMA_REG_ETH_FRAME_ADDR_FIRST + UDMA_REG_ETH_FRAME_OFFS_RX_CFG);
+  // } while ((reg_rx_cfg>>4) & 1);
+  //
+  // /* second wait until the PENDING bit (=bit 4) in RX_CFG is 0 again. this means udma has finished the transaction */
+  // do  {
+  //   reg_rx_cfg = pulp_read32(UDMA_REG_ETH_FRAME_ADDR_FIRST + UDMA_REG_ETH_FRAME_OFFS_RX_CFG);
+  // } while((reg_rx_cfg>>5) & 1);
+
+  uint32_t reg_rx_bytes_left;
+  uint32_t reg_rx_history[10];
+  uint32_t i = 0;
   do {
-    reg_rx_cfg = pulp_read32(UDMA_REG_ETH_FRAME_ADDR_FIRST + UDMA_REG_ETH_FRAME_OFFS_RX_CFG);
-  } while ((reg_rx_cfg>>4) & 1);
+    reg_rx_bytes_left = pulp_read32(UDMA_REG_ETH_FRAME_ADDR_FIRST + UDMA_REG_ETH_FRAME_OFFS_RX_SIZE);
+    if (i < 10)
+      reg_rx_history[i++] = reg_rx_bytes_left;
+  } while (reg_rx_bytes_left != 0);
 
-  /* second wait until the PENDING bit (=bit 4) in RX_CFG is 0 again. this means udma has finished the transaction */
-  do  {
-    reg_rx_cfg = pulp_read32(UDMA_REG_ETH_FRAME_ADDR_FIRST + UDMA_REG_ETH_FRAME_OFFS_RX_CFG);
-  } while((reg_rx_cfg>>5) & 1);
-
+  // for (int j = 0; j < i; j++) {
+  //   printf("reg_rx_bytes_left[%d]: %d\r\n", j, reg_rx_history[j]);
+  // }
 }
 
 void wait_udma_tx_done() {
@@ -201,7 +213,7 @@ void wait_udma_tx_done() {
   uint32_t reg_tx_bytes_left = 0;
   do {
     reg_tx_bytes_left = pulp_read32(UDMA_REG_ETH_FRAME_ADDR_FIRST + UDMA_REG_ETH_FRAME_OFFS_TX_BYTES_LEFT);
-    printf("tx remaining bytes %d\n\r", reg_tx_bytes_left);
+    // printf("tx remaining bytes %d\n\r", reg_tx_bytes_left);
   } while (reg_tx_bytes_left > 0);
 
 }
@@ -317,15 +329,27 @@ void wait_udma_ptptsrx_done() {
   uint32_t reg_rx_cfg = 0;
   /* busy wait until rx transaction finished */
   /* first wait until the EN bit (=bit 4) in RX_CFG is 0 again. this means udma has started the transaction */
+  // do {
+  //   reg_rx_cfg = pulp_read32(UDMA_REG_PTPTSRX_ADDR_FIRST + UDMA_REG_PTPTSRX_OFFS_RX_CFG);
+  // } while ((reg_rx_cfg>>4) & 1);
+  //
+  // /* second wait until the PENDING bit (=bit 4) in RX_CFG is 0 again. this means udma has finished the transaction */
+  // do  {
+  //   reg_rx_cfg = pulp_read32(UDMA_REG_PTPTSRX_ADDR_FIRST + UDMA_REG_PTPTSRX_OFFS_RX_CFG);
+  // } while((reg_rx_cfg>>5) & 1);
+
+  uint32_t reg_rx_bytes_left;
+  uint32_t reg_rx_history[10];
+  uint32_t i = 0;
   do {
-    reg_rx_cfg = pulp_read32(UDMA_REG_PTPTSRX_ADDR_FIRST + UDMA_REG_PTPTSRX_OFFS_RX_CFG);
-  } while ((reg_rx_cfg>>4) & 1);
+    reg_rx_bytes_left = pulp_read32(UDMA_REG_PTPTSRX_ADDR_FIRST + UDMA_REG_PTPTSRX_OFFS_RX_SIZE);
+    if (i < 10)
+      reg_rx_history[i++] = reg_rx_bytes_left;
+  } while (reg_rx_bytes_left != 0);
 
-  /* second wait until the PENDING bit (=bit 4) in RX_CFG is 0 again. this means udma has finished the transaction */
-  do  {
-    reg_rx_cfg = pulp_read32(UDMA_REG_PTPTSRX_ADDR_FIRST + UDMA_REG_PTPTSRX_OFFS_RX_CFG);
-  } while((reg_rx_cfg>>5) & 1);
-
+  // for (int j = 0; j < i; j++) {
+  //   printf("reg_rx_bytes_left[%d]: %d\r\n", j, reg_rx_history[j]);
+  // }
 }
 
 uint8_t enqueue_udma_ptptstx(void *rx_buffer, uint32_t size_bytes) {
@@ -383,112 +407,112 @@ int main() {
 
   /* send dummy ethernet frame - for testing purpose */
   send_dummy_eth_frame();
-  printf("tx transaction enqueued\n\r");
+  // printf("tx transaction enqueued\n\r");
   wait_udma_tx_done();
-  printf("tx transaction sent\n\r");
+  printf("dummy ethernet frame sent\n\r");
 
   /* read PTP TX timestamps */
-  printf("read PTP TS TX\n\r");
   ptpts_tx_buffer[0] = 0;
   ptpts_tx_buffer[1] = 0;
   ptpts_tx_buffer[2] = 0;
   /* read 3 time 32 bit words = 12 bytes */
   enqueue_udma_ptptstx(&ptpts_tx_buffer[0], 3*4);
-  printf("udma transaction enqueued\n\r");
+  // printf("udma transaction enqueued\n\r");
   wait_udma_ptptstx_done();
   /* print ptp ts*/
-  printf("[0]: %08X; [1]: %08X, [2]: %08X\n\r", ptpts_tx_buffer[0], ptpts_tx_buffer[1], ptpts_tx_buffer[2]);
+  printf("PTP_TX_TS: [0]: %08X; [1]: %08X, [2]: %08X\n\r", ptpts_tx_buffer[0], ptpts_tx_buffer[1], ptpts_tx_buffer[2]);
 
 
 
   /* wait until transfer has finished; poll the PENDING bit of TX_CFG register */
   //for(int i = 0; i< 1000000000; i++) asm volatile("nop");
 
-  // uint32_t ef_fifo_cfg = 0;
-  // uint32_t ef_fifo_full = 0;
-  // uint32_t ef_fifo_n = 0;
-  // uint32_t reg_rx_cfg = 0;
-  // uint32_t rx_buf_size = 0;
-  //
-  // uint64_t sec;
-  // uint64_t nanosec;
-  // uint64_t nanosecfrac;
-  //
-  // while (1) {
-  //   /* read RX fifo full register */
-  //   ef_fifo_full = pulp_read32(UDMA_REG_ETH_FRAME_ADDR_FIRST + UDMA_REG_ETH_FRAME_OFFS_RX_FIFO_FULL);
-  //   ef_fifo_cfg = pulp_read32(UDMA_REG_ETH_FRAME_ADDR_FIRST + UDMA_REG_ETH_FRAME_OFFS_RX_FIFO_CFG);
-  //
-  //   /* check END_OF_FRAME bit is set */
-  //   if ((ef_fifo_cfg>>UDMA_REG_ETH_FRAME_RX_FIFO_CFG_EOF_BIT)&1) {
-  //
-  //     /* get number of bytes in RX fifo */
-  //     ef_fifo_n = pulp_read32(UDMA_REG_ETH_FRAME_ADDR_FIRST + UDMA_REG_ETH_FRAME_OFFS_RX_FIFO_N);
-  //     printf("end of frame received; size: %d\n\r", ef_fifo_n);
-  //
-  //     /* copy RX fifo data to rx_buffer */
-  //     enqueue_udma_rx(&rx_buffer[rx_buf_size], ef_fifo_n);
-  //     rx_buf_size += ef_fifo_n;
-  //     wait_udma_rx_done();
-  //     //for(int i = 0; i< 100; i++) asm volatile("nop");
-  //     //printf("udma RX transaction finished\n\r");
-  //
-  //     printf("ETHERNET FRAME\n\r");
-  //     /* debug output */
-  //     for (int i = 0; i < rx_buf_size; i++) {
-  //       if (i%8 == 0) {
-  //         printf("\n\r0x%04X    ", i);
-  //       }
-  //       printf("%02X ", rx_buffer[i]);
-  //     }
-  //     printf("\n\rEND OF FRAME\n\r\n\r");
-  //
-  //     /* read PTP RX timestamps */
-  //     //printf("read PTP TS RX\n\r");
-  //     ptpts_rx_buffer[0] = 0;
-  //     ptpts_rx_buffer[1] = 0;
-  //     ptpts_rx_buffer[2] = 0;
-  //     /* read 3 time 32 bit words = 12 bytes */
-  //     enqueue_udma_ptptsrx(&ptpts_rx_buffer[0], 3*4);
-  //     //printf("udma transaction enqueued\n\r");
-  //     wait_udma_ptptsrx_done();
-  //     /* print ptp ts*/
-  //     printf("RAW PTP RX TS [0]: %08X; [1]: %08X, [2]: %08X\n\r", ptpts_rx_buffer[0], ptpts_rx_buffer[1], ptpts_rx_buffer[2]);
-  //     sec = ptpts_rx_buffer[0]<<16 | ptpts_rx_buffer[1]>>16;
-  //     nanosec = (ptpts_rx_buffer[1]&0x0000FFFF)<<16 | ptpts_rx_buffer[2]>>16;
-  //     nanosecfrac = ptpts_rx_buffer[2] & (0x0000FFFF);
-  //
-  //     printf("FORMATTED: sec: %lu; nanosec: %lu, ns_frac: %lu\n\r", sec, nanosec, nanosecfrac);
-  //
-  //     /* TODO: process ethernet frame */
-  //
-  //     /* reset eof bit; enable fifo */
-  //     pulp_write32(UDMA_REG_ETH_FRAME_ADDR_FIRST + UDMA_REG_ETH_FRAME_OFFS_RX_FIFO_CFG, 0);
-  //     rx_buf_size = 0;
-  //
-  //   } else if ((ef_fifo_full>>UDMA_REG_ETH_FRAME_RX_FIFO_FULL_FULL_BIT)&1) {
-  //     /* get number of bytes in RX fifo */
-  //     ef_fifo_n = pulp_read32(UDMA_REG_ETH_FRAME_ADDR_FIRST + UDMA_REG_ETH_FRAME_OFFS_RX_FIFO_N);
-  //     printf("fifo full; clearing fifo; size: %d\n\r", ef_fifo_n);
-  //
-  //     /* copy RX fifo data to rx_buffer */
-  //     enqueue_udma_rx(&rx_buffer[rx_buf_size], ef_fifo_n);
-  //     rx_buf_size += ef_fifo_n;
-  //     for(int i = 0; i< 100; i++) asm volatile("nop");
-  //     wait_udma_rx_done();
-  //     printf("udma RX transaction finished\n\r");
-  //
-  //     /* debug output */
-  //     // for (int i = 0; i < rx_buf_size; i++) {
-  //     //   if (i%8 == 0) {
-  //     //     printf("\n\r0x%04X    ", i);
-  //     //   }
-  //     //   printf("%02X ", i, rx_buffer[i]);
-  //     // }
-  //     //pulp_write32(UDMA_REG_ETH_FRAME_ADDR_FIRST + UDMA_REG_ETH_FRAME_OFFS_RX_FIFO_CFG, 0);
-  //
-  //   }
-  // }
+  uint32_t ef_fifo_cfg = 0;
+  uint32_t ef_fifo_full = 0;
+  uint32_t ef_fifo_n = 0;
+  uint32_t reg_rx_cfg = 0;
+  uint32_t rx_buf_size = 0;
+
+  uint32_t sec;
+  uint32_t nanosec;
+  uint32_t nanosecfrac;
+
+  while (1) {
+    /* read RX fifo full register */
+    ef_fifo_full = pulp_read32(UDMA_REG_ETH_FRAME_ADDR_FIRST + UDMA_REG_ETH_FRAME_OFFS_RX_FIFO_FULL);
+    ef_fifo_cfg = pulp_read32(UDMA_REG_ETH_FRAME_ADDR_FIRST + UDMA_REG_ETH_FRAME_OFFS_RX_FIFO_CFG);
+
+    /* check END_OF_FRAME bit is set */
+    if ((ef_fifo_cfg>>UDMA_REG_ETH_FRAME_RX_FIFO_CFG_EOF_BIT)&1) {
+
+      /* get number of bytes in RX fifo */
+      ef_fifo_n = pulp_read32(UDMA_REG_ETH_FRAME_ADDR_FIRST + UDMA_REG_ETH_FRAME_OFFS_RX_FIFO_N);
+      // printf("end of frame received; size: %d\n\r", ef_fifo_n);
+
+      /* copy RX fifo data to rx_buffer */
+      enqueue_udma_rx(&rx_buffer[rx_buf_size], ef_fifo_n);
+      rx_buf_size += ef_fifo_n;
+      wait_udma_rx_done();
+      //for(int i = 0; i< 100; i++) asm volatile("nop");
+      //printf("udma RX transaction finished\n\r");
+
+      printf("ETHERNET FRAME recieved; size: %d\n\r", ef_fifo_n);
+      /* debug output */
+      for (int i = 0; i < rx_buf_size; i++) {
+        if (i%8 == 0) {
+          printf("\n\r0x%04X    ", i);
+        }
+        printf("%02X ", rx_buffer[i]);
+      }
+      printf("\n\rEND OF FRAME\n\r\n\r");
+
+      /* read PTP RX timestamps */
+      //printf("read PTP TS RX\n\r");
+      ptpts_rx_buffer[0] = 0;
+      ptpts_rx_buffer[1] = 0;
+      ptpts_rx_buffer[2] = 0;
+      /* read 3 time 32 bit words = 12 bytes */
+      enqueue_udma_ptptsrx(&ptpts_rx_buffer[0], 3*4);
+      // printf("udma transaction enqueued\n\r");
+      wait_udma_ptptsrx_done();
+      /* print ptp ts*/
+      // printf("RAW PTP RX TS [0]: %08X; [1]: %08X, [2]: %08X\n\r", ptpts_rx_buffer[0], ptpts_rx_buffer[1], ptpts_rx_buffer[2]);
+      sec = ptpts_rx_buffer[0]<<16 | ptpts_rx_buffer[1]>>16;
+      nanosec = (ptpts_rx_buffer[1]&0x0000FFFF)<<16 | ptpts_rx_buffer[2]>>16;
+      nanosecfrac = ptpts_rx_buffer[2] & (0x0000FFFF);
+      // printf("SHIFTED PTP RX TS [0]: %08lX; [1]: %08lX, [2]: %08lX\n\r", sec, nanosec, nanosecfrac);
+
+      printf("PTP_RX_TS: sec: %lu; nanosec: %lu, ns_frac: %lu\n\r", sec, nanosec, nanosecfrac);
+
+      /* TODO: process ethernet frame */
+
+      /* reset eof bit; enable fifo */
+      pulp_write32(UDMA_REG_ETH_FRAME_ADDR_FIRST + UDMA_REG_ETH_FRAME_OFFS_RX_FIFO_CFG, 0);
+      rx_buf_size = 0;
+
+    } else if ((ef_fifo_full>>UDMA_REG_ETH_FRAME_RX_FIFO_FULL_FULL_BIT)&1) {
+      /* get number of bytes in RX fifo */
+      ef_fifo_n = pulp_read32(UDMA_REG_ETH_FRAME_ADDR_FIRST + UDMA_REG_ETH_FRAME_OFFS_RX_FIFO_N);
+      printf("fifo full; clearing fifo; size: %d\n\r", ef_fifo_n);
+
+      /* copy RX fifo data to rx_buffer */
+      enqueue_udma_rx(&rx_buffer[rx_buf_size], ef_fifo_n);
+      rx_buf_size += ef_fifo_n;
+      for(int i = 0; i< 100; i++) asm volatile("nop");
+      wait_udma_rx_done();
+      // printf("udma RX transaction finished\n\r");
+
+      /* debug output */
+      // for (int i = 0; i < rx_buf_size; i++) {
+      //   if (i%8 == 0) {
+      //     printf("\n\r0x%04X    ", i);
+      //   }
+      //   printf("%02X ", i, rx_buffer[i]);
+      // }
+      //pulp_write32(UDMA_REG_ETH_FRAME_ADDR_FIRST + UDMA_REG_ETH_FRAME_OFFS_RX_FIFO_CFG, 0);
+
+    }
+  }
 
 
   return 0;
