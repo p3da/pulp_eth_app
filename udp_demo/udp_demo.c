@@ -18,100 +18,131 @@
 u8_t uip_buf[UIP_BUFSIZE+2];
 #define BUF ((struct uip_eth_hdr *)&uip_buf[0])
 
-uint8_t ipaddr_part[4] = {192, 168, 0, 128};
-uint8_t ipsubnet_part[4] = {255, 255, 255, 0};
-struct uip_eth_addr uipmacaddr = {{0x20, 0x00, 0x00, 0x00, 0x00, 0x00}};
+extern u16_t uip_listenports[UIP_LISTENPORTS];
 
-void printEthFrame(uint8_t *rx_buffer, uint16_t ethframe_size) {
+/**
+ * prints ethernet frame info to uart
+ *
+ * rx_buffer - start address of ethernet frame
+ * ethframe_size - length of ethernet frame in buffer in bytes
+ * printRaw - if 0 raw content of ethternet frame is not printed
+ * eth_frame - 2 byte long ethernet type (e.g. 0x0800 = IP)
+ */
+void printEthFrame(uint8_t *rx_buffer, uint16_t ethframe_size, uint8_t printRaw, uint16_t eth_type) {
 
-  printf("ETHERNET FRAME recieved; size: %d\n\r", ethframe_size);
-  /* debug output */
-  // for (int i = 0; i < ethframe_size; i++) {
-  //   if (i%8 == 0) {
-  //     printf("\n\r0x%04X    ", i);
-  //   }
-  //   printf("%02X ", rx_buffer[i]);
-  // }
-  // printf("\n\rEND OF FRAME\n\r\n\r");
+  printf("RX ETHERNET FRAME; size (bytes): 0d%d, ethernet type: 0x%04X\n\r", ethframe_size, (uint16_t)eth_type);
+  if (printRaw) {
+    printf("RAW CONTENT:");
+    /* debug output */
+    for (int i = 0; i < ethframe_size; i++) {
+      if (i%8 == 0) {
+        printf("\n\r0x%04X    ", i);
+      }
+      printf("%02X ", rx_buffer[i]);
+    }
+    printf("\r\nEND\n\r\n\r");
+  }
+
+}
+
+/**
+ * print current ip configuration
+ */
+void printIPConfig() {
+  printf("IP Configuration of Host: \r\n");
+  printf("IP Address: %d.%d.%d.%d\r\n", ((u8_t *)uip_hostaddr)[0], ((u8_t *)uip_hostaddr)[1], ((u8_t *)uip_hostaddr)[2], ((u8_t *)uip_hostaddr)[3]);
+  printf("Netmask:    %d.%d.%d.%d\r\n", ((u8_t *)uip_netmask)[0], ((u8_t *)uip_netmask)[1], ((u8_t *)uip_netmask)[2], ((u8_t *)uip_netmask)[3]);
+  printf("Gateway:    %d.%d.%d.%d\r\n", ((u8_t *)uip_draddr)[0], ((u8_t *)uip_draddr)[1], ((u8_t *)uip_draddr)[2], ((u8_t *)uip_draddr)[3]);
+  printf("\r\n");
 }
 
 
 int main(void) {
-  //int i;
-  printf("Hello\n\r");
   /* initialize uDMA subsystem and uDMA peripherals */
   init_udma_eth_frame();
 
-
   /* Initialize the uIP ARP subsystem */
   uip_arp_init();
-  /*set mac address */
-  uip_setethaddr(uipmacaddr);
-
   /* initialize uIP stack*/
   uip_init();
-
-  /* set host ip address and subnet */
-  uip_ipaddr_t ipaddr;
-  uip_ipaddr_t ipsubnet;
-
-  uip_ipaddr(&ipaddr, ipaddr_part[0], ipaddr_part[1], ipaddr_part[2], ipaddr_part[3]);
-  uip_sethostaddr(&ipaddr);
-  uip_ipaddr(&ipsubnet, ipsubnet_part[0], ipsubnet_part[1], ipsubnet_part[2], ipsubnet_part[3]);
-  uip_setnetmask(&ipsubnet);
-
-  /* Initialize the application to listen on TCP port 23 (telnet) */
+  /* Initialize the application to listen on TCP port 1234 */
   uip_listen(HTONS(1234));
+
+  /* print welcome message */
+  uip_ipaddr_t host_ipaddr;
+  uip_ipaddr_t host_ipsubnet;
+  uip_ipaddr_t host_ipdraddr;
+
+  /* print welcome message */
+  printf("Welcome!\r\n\r\n");
+  printIPConfig();
+  printf("listening on following ports: ");
+  for(int c = 0; c < UIP_LISTENPORTS; ++c) {
+    if(uip_listenports[c] != 0) {
+      printf("%d\r\n", htons(uip_listenports[c]));
+    }
+  }
+
 
   uint32_t rx_len;
   uint32_t counter_timer2 = 0;
   uint32_t counter_timer = 0;
 
   while(1) {
+
+    /* check if complete ethernet frame is available */
     if (eof_received()) {
 
+      /* get size in bytes */
       uint32_t rx_len = eth_frame_rx_size();
+      /* load frame into buffer */
       enqueue_udma_rx(&uip_buf[0], rx_len);
       wait_udma_rx_done();
-      printEthFrame((uint8_t *)&uip_buf[0], rx_len);
       uip_len = rx_len;
 
+      /* enable reception of next ethernet frame */
       eof_reset();
 
+      /* process frame depending on ethernet type */
+
+      /* ethernet type == 0x0800 */
       if(BUF->type == htons(UIP_ETHTYPE_IP)) {
-        printf("eth type: ip\n\r");
-      	uip_arp_ipin();
-      	uip_input();
+        //printEthFrame((uint8_t *)&uip_buf[0], rx_len, 1, UIP_ETHTYPE_IP);
 
-        /* If the above function invocation resulted in data that
-         should be sent out on the network, the global variable
-         uip_len is set to a value > 0. */
+        /* refresh ARP table */
+        uip_arp_ipin();
+        /* process IP packet */
+        uip_input();
+
+        /* if one of the function above resulted in an outbound ethernet frame, send it now */
         if(uip_len > 0) {
+          /* add ethernet header by looking up the ARP table; if no entry was found
+           * for the destination IP, the uip_buf is overwritten and an ARP request
+           * will be done instead
+           */
           uip_arp_out();
-          printf("eth frame (ip) out len: %d\n\r", uip_len);
           enqueue_udma_tx(&uip_buf[0], uip_len);
           wait_udma_tx_done();
         }
+
+      /* ethernet type == 0x0806 */
       } else if (BUF->type == htons(UIP_ETHTYPE_ARP)) {
+        //printEthFrame((uint8_t *)&uip_buf[0], rx_len, 1, UIP_ETHTYPE_ARP);
 
-        printf("eth type: arp\n\r");
+        /* process ARP; this may ether be a respone, then uip_len will be 0 afterwards
+         * if this is a ARP probe, answer it
+         */
         uip_arp_arpin();
-        /* If the above function invocation resulted in data that
-           should be sent out on the network, the global variable
-           uip_len is set to a value > 0. */
         if(uip_len > 0) {
-          //uip_arp_out();
-          printf("eth frame (arp) out len: %d\n\r", uip_len);
           enqueue_udma_tx(&uip_buf[0], uip_len);
           wait_udma_tx_done();
         }
+      // TODO } else if(BUF->type == htons(UIP_ETHTYPE_PTP)) {}
 
-
+      } else {
+        // protocol not implemented
       }
-      // TODO else if(BUF->type == htons(UIP_ETHTYPE_PTP))
-
     } else if (counter_timer > 100000) {
-      printf("counter 1 expired\r\n");
       counter_timer = 0;
       // timer_reset(&periodic_timer);
       for(int i = 0; i < UIP_CONNS; i++) {
@@ -136,7 +167,6 @@ int main(void) {
 
       /* Call the ARP timer function every 10 seconds. */
       if (counter_timer2 > 10000000) {
-        printf("counter 2 expired\r\n");
         counter_timer2 = 0;
         uip_arp_timer();
       }
@@ -150,7 +180,7 @@ int main(void) {
 
 void uip_callback(void) {
   // TODO handle udp and tcp connections; ARP and ICMP is handled internally in uIP stack
-  printf("uip_callback TODO\r\n");
+  //printf("uip_callback TODO\r\n");
 
   switch (uip_conn->lport) {
   case HTONS(1234):
@@ -159,7 +189,11 @@ void uip_callback(void) {
     }
     break;
   default:
-    printf("received packet at port: %d; do nothing\r\n", uip_conn->lport);
+    //printf("received packet at port: %d; do nothing\r\n", uip_conn->lport);
     break;
   }
+}
+
+void uip_udp_callback(void) {
+  //printf("uip_udp_callback TODO\r\n");
 }
