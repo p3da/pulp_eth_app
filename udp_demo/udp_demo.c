@@ -50,10 +50,24 @@ void printEthFrame(uint8_t *rx_buffer, uint16_t ethframe_size, uint8_t printRaw,
  */
 void printIPConfig() {
   printf("IP Configuration of Host: \r\n");
-  printf("IP Address: %d.%d.%d.%d\r\n", ((u8_t *)uip_hostaddr)[0], ((u8_t *)uip_hostaddr)[1], ((u8_t *)uip_hostaddr)[2], ((u8_t *)uip_hostaddr)[3]);
-  printf("Netmask:    %d.%d.%d.%d\r\n", ((u8_t *)uip_netmask)[0], ((u8_t *)uip_netmask)[1], ((u8_t *)uip_netmask)[2], ((u8_t *)uip_netmask)[3]);
-  printf("Gateway:    %d.%d.%d.%d\r\n", ((u8_t *)uip_draddr)[0], ((u8_t *)uip_draddr)[1], ((u8_t *)uip_draddr)[2], ((u8_t *)uip_draddr)[3]);
+  printf("IP Address:  %d.%d.%d.%d\r\n", ((u8_t *)uip_hostaddr)[0], ((u8_t *)uip_hostaddr)[1], ((u8_t *)uip_hostaddr)[2], ((u8_t *)uip_hostaddr)[3]);
+  printf("Netmask:     %d.%d.%d.%d\r\n", ((u8_t *)uip_netmask)[0], ((u8_t *)uip_netmask)[1], ((u8_t *)uip_netmask)[2], ((u8_t *)uip_netmask)[3]);
+  printf("Gateway:     %d.%d.%d.%d\r\n", ((u8_t *)uip_draddr)[0], ((u8_t *)uip_draddr)[1], ((u8_t *)uip_draddr)[2], ((u8_t *)uip_draddr)[3]);
   printf("\r\n");
+}
+
+/**
+ * print current ethernet config
+ */
+void printEthConfig() {
+  printf("Ethernet MAC Configuration of Host: \r\n");
+  printf("MAC Address: %02X:%02X:%02X:%02X:%02X:%02X\r\n", ((u8_t *)uip_ethaddr.addr)[0], ((u8_t *)uip_ethaddr.addr)[1], ((u8_t *)uip_ethaddr.addr)[2], ((u8_t *)uip_ethaddr.addr)[3], ((u8_t *)uip_ethaddr.addr)[4], ((u8_t *)uip_ethaddr.addr)[5]);
+  printf("\r\n");
+}
+
+
+void uip_log(char *msg) {
+  printf(msg);
 }
 
 
@@ -68,13 +82,9 @@ int main(void) {
   /* Initialize the application to listen on TCP port 1234 */
   uip_listen(HTONS(1234));
 
-  /* print welcome message */
-  uip_ipaddr_t host_ipaddr;
-  uip_ipaddr_t host_ipsubnet;
-  uip_ipaddr_t host_ipdraddr;
-
-  /* print welcome message */
+  /* print welcome message and network configuration */
   printf("Welcome!\r\n\r\n");
+  printEthConfig();
   printIPConfig();
   printf("listening on following ports: ");
   for(int c = 0; c < UIP_LISTENPORTS; ++c) {
@@ -82,11 +92,14 @@ int main(void) {
       printf("%d\r\n", htons(uip_listenports[c]));
     }
   }
-
+  printf("\r\n");
 
   uint32_t rx_len;
   uint32_t counter_timer2 = 0;
   uint32_t counter_timer = 0;
+
+  /* open UDP connection */
+  uip_ipaddr_t addr;
 
   while(1) {
 
@@ -182,8 +195,15 @@ void uip_callback(void) {
   // TODO handle udp and tcp connections; ARP and ICMP is handled internally in uIP stack
   //printf("uip_callback TODO\r\n");
 
-  switch (uip_conn->lport) {
+
+}
+
+void uip_udp_callback(void) {
+  //printf("uip_udp_callback TODO; uip_conn->lport: %d\r\n", uip_udp_conn->lport);
+
+  switch (uip_udp_conn->rport) {
   case HTONS(1234):
+    printf("received request at port 1234\r\n");
     if (uip_newdata() || uip_rexmit()) {
       uip_send("DEADBEEF\n", 9);
     }
@@ -192,8 +212,4 @@ void uip_callback(void) {
     //printf("received packet at port: %d; do nothing\r\n", uip_conn->lport);
     break;
   }
-}
-
-void uip_udp_callback(void) {
-  //printf("uip_udp_callback TODO\r\n");
 }

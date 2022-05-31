@@ -8,6 +8,7 @@
 #include <stdint.h>
 #include <string.h>
 
+#include <eth_frame.h>
 
 #define TX_BUFFER_SIZE_MAX 4096
 #define RX_BUFFER_SIZE_MAX 4096
@@ -108,115 +109,117 @@ void test_udma_reg() {
     ;
 
     reg_val_whoami = pulp_read32(reg_addr_whoami);
-    printf("WHOAMI[%d]: 0x%02X\n\r", i, reg_val_whoami);
+    printf("WHOAMI[%d]: 0x%02X\n", i, reg_val_whoami);
   }
 
   return;
 
 }
 
-void init_udma_eth_frame() {
-  /* enable clock for udma peripheral */
-  plp_udma_cg_set(plp_udma_cg_get() | (1<<PER_ID_ETH_FRAME));
-}
+// MOVED to eth_frame.c
+// void init_udma_eth_frame() {
+//   /* enable clock for udma peripheral */
+//   plp_udma_cg_set(plp_udma_cg_get() | (1<<PER_ID_ETH_FRAME));
+// }
 
+// MOVED to eth_frame.c
+// uint8_t enqueue_udma_tx(void *tx_buffer, uint32_t size_bytes) {
+//   /* set source start address for udma tx transaction */
+//   pulp_write32(UDMA_REG_ETH_FRAME_ADDR_FIRST + UDMA_REG_ETH_FRAME_OFFS_TX_SADDR, (uint32_t)tx_buffer);
+//
+//   /*  set number of bytes to transfer */
+//   /* tx_buffer_size means word size (16 bit), therefore multiply by 2 */
+//   pulp_write32(UDMA_REG_ETH_FRAME_ADDR_FIRST + UDMA_REG_ETH_FRAME_OFFS_TX_SIZE, size_bytes);
+//
+//   /* tell udma_ethernet_frame how many bytes to transfer; used for fifo counter */
+//   pulp_write32(UDMA_REG_ETH_FRAME_ADDR_FIRST + UDMA_REG_ETH_FRAME_OFFS_TX_BYTES, size_bytes);
+//
+//   /* TX_CFG register bits (see pulpissimo/doc/datasheet.pdf)
+//    * bit 0 - CONTINOUS(R/W) - not unused here
+//    * bit 4 - EN(R/W) - 1=enable and start transfer; 0=disabled
+//    * bit 5 - PENDING(R) - 1=pending transfer in the queue; 0=no pending transfer in the queue
+//    * bit 6 - CLR(W) - 1=stop and clear the on-going transfer; 0=disabled
+//    * other bits are not used
+//    */
+//   /* enable tx channel */
+//   pulp_write32(UDMA_REG_ETH_FRAME_ADDR_FIRST + UDMA_REG_ETH_FRAME_OFFS_TX_CFG, (1<<4));
+//
+//   /* DEBUG OUTPUT */
+//   uint32_t reg_tx_bytes;
+//   uint32_t reg_tx_bytes_left;
+//   reg_tx_bytes_left = pulp_read32(UDMA_REG_ETH_FRAME_ADDR_FIRST + UDMA_REG_ETH_FRAME_OFFS_TX_BYTES_LEFT);
+//   reg_tx_bytes = pulp_read32(UDMA_REG_ETH_FRAME_ADDR_FIRST + UDMA_REG_ETH_FRAME_OFFS_TX_BYTES);
+//   // printf("tx bytes %d\n", reg_tx_bytes);
+//   // printf("tx remaining bytes %d\n", reg_tx_bytes_left);
+// }
 
-uint8_t enqueue_udma_tx(void *tx_buffer, uint32_t size_bytes) {
-  /* set source start address for udma tx transaction */
-  pulp_write32(UDMA_REG_ETH_FRAME_ADDR_FIRST + UDMA_REG_ETH_FRAME_OFFS_TX_SADDR, (uint32_t)tx_buffer);
+// MOVED to eth_frame.c
+// uint8_t enqueue_udma_rx(void *rx_buffer, uint32_t size_bytes) {
+//   /* set destination start address for udma rx transaction */
+//   pulp_write32(UDMA_REG_ETH_FRAME_ADDR_FIRST + UDMA_REG_ETH_FRAME_OFFS_RX_SADDR, (uint32_t)rx_buffer);
+//
+//   /*  set number of bytes to transfer */
+//   /* size in bytes */
+//   pulp_write32(UDMA_REG_ETH_FRAME_ADDR_FIRST + UDMA_REG_ETH_FRAME_OFFS_RX_SIZE, size_bytes);
+//
+//   /* RX_CFG register bits (see pulpissimo/doc/datasheet.pdf)
+//    * bit 0 - CONTINOUS(R/W) - not unused here
+//    * bit 4 - EN(R/W) - 1=enable and start transfer; 0=disabled
+//    * bit 5 - PENDING(R) - 1=pending transfer in the queue; 0=no pending transfer in the queue
+//    * bit 6 - CLR(W) - 1=stop and clear the on-going transfer; 0=disabled
+//    * other bits are not used
+//    */
+//   /* enable rx channel */
+//   pulp_write32(UDMA_REG_ETH_FRAME_ADDR_FIRST + UDMA_REG_ETH_FRAME_OFFS_RX_CFG, (1<<4));
+// }
 
-  /*  set number of bytes to transfer */
-  /* tx_buffer_size means word size (16 bit), therefore multiply by 2 */
-  pulp_write32(UDMA_REG_ETH_FRAME_ADDR_FIRST + UDMA_REG_ETH_FRAME_OFFS_TX_SIZE, size_bytes);
+// void wait_udma_rx_done() {
+//   uint32_t reg_rx_cfg = 0;
+//   /* busy wait until rx transaction finished */
+//   /* first wait until the EN bit (=bit 4) in RX_CFG is 0 again. this means udma has started the transaction */
+//   // do {
+//   //   reg_rx_cfg = pulp_read32(UDMA_REG_ETH_FRAME_ADDR_FIRST + UDMA_REG_ETH_FRAME_OFFS_RX_CFG);
+//   // } while ((reg_rx_cfg>>4) & 1);
+//   //
+//   // /* second wait until the PENDING bit (=bit 4) in RX_CFG is 0 again. this means udma has finished the transaction */
+//   // do  {
+//   //   reg_rx_cfg = pulp_read32(UDMA_REG_ETH_FRAME_ADDR_FIRST + UDMA_REG_ETH_FRAME_OFFS_RX_CFG);
+//   // } while((reg_rx_cfg>>5) & 1);
+//
+//   uint32_t reg_rx_bytes_left;
+//   uint32_t reg_rx_history[10];
+//   uint32_t i = 0;
+//   do {
+//     reg_rx_bytes_left = pulp_read32(UDMA_REG_ETH_FRAME_ADDR_FIRST + UDMA_REG_ETH_FRAME_OFFS_RX_SIZE);
+//     if (i < 10)
+//       reg_rx_history[i++] = reg_rx_bytes_left;
+//   } while (reg_rx_bytes_left != 0);
+//
+//   // for (int j = 0; j < i; j++) {
+//   //   printf("reg_rx_bytes_left[%d]: %d\r\n", j, reg_rx_history[j]);
+//   // }
+// }
 
-  /* tell udma_ethernet_frame how many bytes to transfer; used for fifo counter */
-  pulp_write32(UDMA_REG_ETH_FRAME_ADDR_FIRST + UDMA_REG_ETH_FRAME_OFFS_TX_BYTES, size_bytes);
-
-  /* TX_CFG register bits (see pulpissimo/doc/datasheet.pdf)
-   * bit 0 - CONTINOUS(R/W) - not unused here
-   * bit 4 - EN(R/W) - 1=enable and start transfer; 0=disabled
-   * bit 5 - PENDING(R) - 1=pending transfer in the queue; 0=no pending transfer in the queue
-   * bit 6 - CLR(W) - 1=stop and clear the on-going transfer; 0=disabled
-   * other bits are not used
-   */
-  /* enable tx channel */
-  pulp_write32(UDMA_REG_ETH_FRAME_ADDR_FIRST + UDMA_REG_ETH_FRAME_OFFS_TX_CFG, (1<<4));
-
-  /* DEBUG OUTPUT */
-  uint32_t reg_tx_bytes;
-  uint32_t reg_tx_bytes_left;
-  reg_tx_bytes_left = pulp_read32(UDMA_REG_ETH_FRAME_ADDR_FIRST + UDMA_REG_ETH_FRAME_OFFS_TX_BYTES_LEFT);
-  reg_tx_bytes = pulp_read32(UDMA_REG_ETH_FRAME_ADDR_FIRST + UDMA_REG_ETH_FRAME_OFFS_TX_BYTES);
-  // printf("tx bytes %d\n\r", reg_tx_bytes);
-  // printf("tx remaining bytes %d\n\r", reg_tx_bytes_left);
-}
-
-uint8_t enqueue_udma_rx(void *rx_buffer, uint32_t size_bytes) {
-  /* set destination start address for udma rx transaction */
-  pulp_write32(UDMA_REG_ETH_FRAME_ADDR_FIRST + UDMA_REG_ETH_FRAME_OFFS_RX_SADDR, (uint32_t)rx_buffer);
-
-  /*  set number of bytes to transfer */
-  /* size in bytes */
-  pulp_write32(UDMA_REG_ETH_FRAME_ADDR_FIRST + UDMA_REG_ETH_FRAME_OFFS_RX_SIZE, size_bytes);
-
-  /* RX_CFG register bits (see pulpissimo/doc/datasheet.pdf)
-   * bit 0 - CONTINOUS(R/W) - not unused here
-   * bit 4 - EN(R/W) - 1=enable and start transfer; 0=disabled
-   * bit 5 - PENDING(R) - 1=pending transfer in the queue; 0=no pending transfer in the queue
-   * bit 6 - CLR(W) - 1=stop and clear the on-going transfer; 0=disabled
-   * other bits are not used
-   */
-  /* enable rx channel */
-  pulp_write32(UDMA_REG_ETH_FRAME_ADDR_FIRST + UDMA_REG_ETH_FRAME_OFFS_RX_CFG, (1<<4));
-}
-
-void wait_udma_rx_done() {
-  uint32_t reg_rx_cfg = 0;
-  /* busy wait until rx transaction finished */
-  /* first wait until the EN bit (=bit 4) in RX_CFG is 0 again. this means udma has started the transaction */
-  // do {
-  //   reg_rx_cfg = pulp_read32(UDMA_REG_ETH_FRAME_ADDR_FIRST + UDMA_REG_ETH_FRAME_OFFS_RX_CFG);
-  // } while ((reg_rx_cfg>>4) & 1);
-  //
-  // /* second wait until the PENDING bit (=bit 4) in RX_CFG is 0 again. this means udma has finished the transaction */
-  // do  {
-  //   reg_rx_cfg = pulp_read32(UDMA_REG_ETH_FRAME_ADDR_FIRST + UDMA_REG_ETH_FRAME_OFFS_RX_CFG);
-  // } while((reg_rx_cfg>>5) & 1);
-
-  uint32_t reg_rx_bytes_left;
-  uint32_t reg_rx_history[10];
-  uint32_t i = 0;
-  do {
-    reg_rx_bytes_left = pulp_read32(UDMA_REG_ETH_FRAME_ADDR_FIRST + UDMA_REG_ETH_FRAME_OFFS_RX_SIZE);
-    if (i < 10)
-      reg_rx_history[i++] = reg_rx_bytes_left;
-  } while (reg_rx_bytes_left != 0);
-
-  // for (int j = 0; j < i; j++) {
-  //   printf("reg_rx_bytes_left[%d]: %d\r\n", j, reg_rx_history[j]);
-  // }
-}
-
-void wait_udma_tx_done() {
-  uint32_t reg_tx_cfg = 0;
-  /* busy wait until tx transaction finished */
-  /* first wait until the EN bit (=bit 4) in TX_CFG is 0 again. this means udma has started the transaction */
-  // do {
-  //   reg_tx_cfg = pulp_read32(UDMA_REG_ETH_FRAME_ADDR_FIRST + UDMA_REG_ETH_FRAME_OFFS_TX_CFG);
-  // } while ((reg_tx_cfg>>4) & 1);
-
-  /* second wait until the PENDING bit (=bit 4) in TX_CFG is 0 again. this means udma has finished the transaction */
-  // do  {
-  //   reg_tx_cfg = pulp_read32(UDMA_REG_ETH_FRAME_ADDR_FIRST + UDMA_REG_ETH_FRAME_OFFS_TX_CFG);
-  // } while((reg_tx_cfg>>5) & 1);
-
-  uint32_t reg_tx_bytes_left = 0;
-  do {
-    reg_tx_bytes_left = pulp_read32(UDMA_REG_ETH_FRAME_ADDR_FIRST + UDMA_REG_ETH_FRAME_OFFS_TX_BYTES_LEFT);
-    // printf("tx remaining bytes %d\n\r", reg_tx_bytes_left);
-  } while (reg_tx_bytes_left > 0);
-
-}
+// void wait_udma_tx_done() {
+//   uint32_t reg_tx_cfg = 0;
+//   /* busy wait until tx transaction finished */
+//   /* first wait until the EN bit (=bit 4) in TX_CFG is 0 again. this means udma has started the transaction */
+//   // do {
+//   //   reg_tx_cfg = pulp_read32(UDMA_REG_ETH_FRAME_ADDR_FIRST + UDMA_REG_ETH_FRAME_OFFS_TX_CFG);
+//   // } while ((reg_tx_cfg>>4) & 1);
+//
+//   /* second wait until the PENDING bit (=bit 4) in TX_CFG is 0 again. this means udma has finished the transaction */
+//   // do  {
+//   //   reg_tx_cfg = pulp_read32(UDMA_REG_ETH_FRAME_ADDR_FIRST + UDMA_REG_ETH_FRAME_OFFS_TX_CFG);
+//   // } while((reg_tx_cfg>>5) & 1);
+//
+//   uint32_t reg_tx_bytes_left = 0;
+//   do {
+//     reg_tx_bytes_left = pulp_read32(UDMA_REG_ETH_FRAME_ADDR_FIRST + UDMA_REG_ETH_FRAME_OFFS_TX_BYTES_LEFT);
+//     // printf("tx remaining bytes %d\n", reg_tx_bytes_left);
+//   } while (reg_tx_bytes_left > 0);
+//
+// }
 
 
 void send_dummy_eth_frame() {
@@ -242,7 +245,7 @@ void send_dummy_eth_frame() {
 
   /* debug output; print buffer to uart */
   for (int j = 0; j < 32; j++) {
-    //printf("tx_buffer[%d] = 0x%02X\n\r", j, tx_buffer[j]);
+    printf("tx_buffer[%d] = 0x%02X\n", j, tx_buffer[j]);
   }
 
   /* copy tx_buffer via udma to ethernet mac; submit size in bytes */
@@ -282,7 +285,7 @@ void send_dummy_eth_frame16() {
 
   /* debug output; print buffer to uart */
   for (int j = 0; j < 32; j++) {
-    printf("tx_buffer[%d] = 0x%04X\n\r", j, tx_buffer[j]);
+    printf("tx_buffer[%d] = 0x%04X\n", j, tx_buffer[j]);
   }
 
   /* copy tx_buffer via udma to ethernet mac; submit size in bytes */
@@ -379,6 +382,12 @@ void wait_udma_ptptstx_done() {
     reg_rx_cfg = pulp_read32(UDMA_REG_PTPTSTX_ADDR_FIRST + UDMA_REG_PTPTSTX_OFFS_RX_CFG);
   } while ((reg_rx_cfg>>4) & 1);
 
+  /* busy wait until tx transaction finished */
+  uint32_t reg_tx_bytes_left = 0;
+  do {
+    reg_tx_bytes_left = pulp_read32(UDMA_REG_PTPTSTX_ADDR_FIRST + UDMA_REG_PTPTSTX_OFFS_RX_FIFO_N);
+  } while (reg_tx_bytes_left > 0);
+
   /* second wait until the PENDING bit (=bit 4) in RX_CFG is 0 again. this means udma has finished the transaction */
   // do  {
   //   reg_rx_cfg = pulp_read32(UDMA_REG_PTPTSTX_ADDR_FIRST + UDMA_REG_PTPTSTX_OFFS_RX_CFG);
@@ -389,15 +398,19 @@ void wait_udma_ptptstx_done() {
 int main() {
 
   /* print via uart */
-  //printf("test printf\n\r");
+  //printf("test printf\n");
 
   /* read dummy register */
   int reg_val_whoami;
   reg_val_whoami = pulp_read32(UDMA_REG_ETH_FRAME_ADDR_FIRST + 0xC);
-  //printf("WHOAMI(reg 0x%02X): 0x%02X\n\r", UDMA_REG_ETH_FRAME_ADDR_FIRST + 0xC, reg_val_whoami);
+  //printf("WHOAMI(reg 0x%02X): 0x%02X\n", UDMA_REG_ETH_FRAME_ADDR_FIRST + 0xC, reg_val_whoami);
 
   // was used for debugging purposes
   //test_udma_reg();
+
+  uint32_t sec;
+  uint32_t nanosec;
+  uint32_t nanosecfrac;
 
   /* enable udma peripherals */
   /* ethernet frame */
@@ -407,9 +420,9 @@ int main() {
 
   /* send dummy ethernet frame - for testing purpose */
   send_dummy_eth_frame();
-  // printf("tx transaction enqueued\n\r");
+  // printf("tx transaction enqueued\n");
   wait_udma_tx_done();
-  printf("dummy ethernet frame sent\n\r");
+  printf("dummy ethernet frame sent\n");
 
   /* read PTP TX timestamps */
   ptpts_tx_buffer[0] = 0;
@@ -417,11 +430,17 @@ int main() {
   ptpts_tx_buffer[2] = 0;
   /* read 3 time 32 bit words = 12 bytes */
   enqueue_udma_ptptstx(&ptpts_tx_buffer[0], 3*4);
-  // printf("udma transaction enqueued\n\r");
+  printf("udma transaction enqueued\n");
   wait_udma_ptptstx_done();
   /* print ptp ts*/
-  printf("PTP_TX_TS: [0]: %08X; [1]: %08X, [2]: %08X\n\r", ptpts_tx_buffer[0], ptpts_tx_buffer[1], ptpts_tx_buffer[2]);
+  printf("PTP TX TS (raw): [0]: %08X; [1]: %08X, [2]: %08X\n", ptpts_tx_buffer[0], ptpts_tx_buffer[1], ptpts_tx_buffer[2]);
 
+  sec = ptpts_tx_buffer[0]<<16 | ptpts_tx_buffer[1]>>16;
+  nanosec = (ptpts_tx_buffer[1]&0x0000FFFF)<<16 | ptpts_tx_buffer[2]>>16;
+  nanosecfrac = ptpts_tx_buffer[2] & (0x0000FFFF);
+  // printf("SHIFTED PTP RX TS [0]: %08lX; [1]: %08lX, [2]: %08lX\n", sec, nanosec, nanosecfrac);
+
+  printf("PTP TX TS (formated): sec: %lu; nanosec: %lu, ns_frac: %lu\n", sec, nanosec, nanosecfrac);
 
 
   /* wait until transfer has finished; poll the PENDING bit of TX_CFG register */
@@ -433,9 +452,7 @@ int main() {
   uint32_t reg_rx_cfg = 0;
   uint32_t rx_buf_size = 0;
 
-  uint32_t sec;
-  uint32_t nanosec;
-  uint32_t nanosecfrac;
+
 
   while (1) {
     /* read RX fifo full register */
@@ -447,42 +464,42 @@ int main() {
 
       /* get number of bytes in RX fifo */
       ef_fifo_n = pulp_read32(UDMA_REG_ETH_FRAME_ADDR_FIRST + UDMA_REG_ETH_FRAME_OFFS_RX_FIFO_N);
-      // printf("end of frame received; size: %d\n\r", ef_fifo_n);
+      // printf("end of frame received; size: %d\n", ef_fifo_n);
 
       /* copy RX fifo data to rx_buffer */
       enqueue_udma_rx(&rx_buffer[rx_buf_size], ef_fifo_n);
       rx_buf_size += ef_fifo_n;
       wait_udma_rx_done();
       //for(int i = 0; i< 100; i++) asm volatile("nop");
-      //printf("udma RX transaction finished\n\r");
+      //printf("udma RX transaction finished\n");
 
-      printf("ETHERNET FRAME recieved; size: %d\n\r", ef_fifo_n);
+      printf("ETHERNET FRAME recieved; size: %d\n", ef_fifo_n);
       /* debug output */
       for (int i = 0; i < rx_buf_size; i++) {
         if (i%8 == 0) {
-          printf("\n\r0x%04X    ", i);
+          printf("\n0x%04X    ", i);
         }
         printf("%02X ", rx_buffer[i]);
       }
-      printf("\n\rEND OF FRAME\n\r\n\r");
+      printf("\nEND OF FRAME\n\n");
 
       /* read PTP RX timestamps */
-      //printf("read PTP TS RX\n\r");
+      //printf("read PTP TS RX\n");
       ptpts_rx_buffer[0] = 0;
       ptpts_rx_buffer[1] = 0;
       ptpts_rx_buffer[2] = 0;
       /* read 3 time 32 bit words = 12 bytes */
       enqueue_udma_ptptsrx(&ptpts_rx_buffer[0], 3*4);
-      // printf("udma transaction enqueued\n\r");
+      printf("udma transaction enqueued\n");
       wait_udma_ptptsrx_done();
       /* print ptp ts*/
-      // printf("RAW PTP RX TS [0]: %08X; [1]: %08X, [2]: %08X\n\r", ptpts_rx_buffer[0], ptpts_rx_buffer[1], ptpts_rx_buffer[2]);
+      printf("PTP RX TS raw [0]: %08X; [1]: %08X, [2]: %08X\n", ptpts_rx_buffer[0], ptpts_rx_buffer[1], ptpts_rx_buffer[2]);
       sec = ptpts_rx_buffer[0]<<16 | ptpts_rx_buffer[1]>>16;
       nanosec = (ptpts_rx_buffer[1]&0x0000FFFF)<<16 | ptpts_rx_buffer[2]>>16;
       nanosecfrac = ptpts_rx_buffer[2] & (0x0000FFFF);
-      // printf("SHIFTED PTP RX TS [0]: %08lX; [1]: %08lX, [2]: %08lX\n\r", sec, nanosec, nanosecfrac);
+      // printf("SHIFTED PTP RX TS [0]: %08lX; [1]: %08lX, [2]: %08lX\n", sec, nanosec, nanosecfrac);
 
-      printf("PTP_RX_TS: sec: %lu; nanosec: %lu, ns_frac: %lu\n\r", sec, nanosec, nanosecfrac);
+      printf("PTP RX TS (formated): sec: %lu; nanosec: %lu, ns_frac: %lu\n", sec, nanosec, nanosecfrac);
 
       /* TODO: process ethernet frame */
 
@@ -493,19 +510,19 @@ int main() {
     } else if ((ef_fifo_full>>UDMA_REG_ETH_FRAME_RX_FIFO_FULL_FULL_BIT)&1) {
       /* get number of bytes in RX fifo */
       ef_fifo_n = pulp_read32(UDMA_REG_ETH_FRAME_ADDR_FIRST + UDMA_REG_ETH_FRAME_OFFS_RX_FIFO_N);
-      printf("fifo full; clearing fifo; size: %d\n\r", ef_fifo_n);
+      printf("fifo full; clearing fifo; size: %d\n", ef_fifo_n);
 
       /* copy RX fifo data to rx_buffer */
       enqueue_udma_rx(&rx_buffer[rx_buf_size], ef_fifo_n);
       rx_buf_size += ef_fifo_n;
       for(int i = 0; i< 100; i++) asm volatile("nop");
       wait_udma_rx_done();
-      // printf("udma RX transaction finished\n\r");
+      // printf("udma RX transaction finished\n");
 
       /* debug output */
       // for (int i = 0; i < rx_buf_size; i++) {
       //   if (i%8 == 0) {
-      //     printf("\n\r0x%04X    ", i);
+      //     printf("\n0x%04X    ", i);
       //   }
       //   printf("%02X ", i, rx_buffer[i]);
       // }
