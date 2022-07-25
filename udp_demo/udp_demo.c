@@ -192,24 +192,9 @@ int main(void) {
 }
 
 void uip_callback(void) {
-  // TODO handle udp and tcp connections; ARP and ICMP is handled internally in uIP stack
-  //printf("uip_callback TODO\r\n");
-
 
 }
 
 void uip_udp_callback(void) {
-  //printf("uip_udp_callback TODO; uip_conn->lport: %d\r\n", uip_udp_conn->lport);
 
-  // switch (uip_udp_conn->rport) {
-  // case HTONS(1234):
-  //   printf("received request at port 1234\r\n");
-  //   if (uip_newdata() || uip_rexmit()) {
-  //     uip_send("DEADBEEF\n", 9);
-  //   }
-  //   break;
-  // default:
-  //   //printf("received packet at port: %d; do nothing\r\n", uip_conn->lport);
-  //   break;
-  // }
 }

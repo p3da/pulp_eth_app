@@ -30,6 +30,8 @@
 #define UDMA_REG_ETH_FRAME_OFFS_RX_SIZE  0x04
 #define UDMA_REG_ETH_FRAME_OFFS_RX_CFG   0x08
 
+#define UDMA_REG_ETH_FRAME_OFFS_WHOAMI   0x0C
+
 #define UDMA_REG_ETH_FRAME_OFFS_TX_SADDR 0x10
 #define UDMA_REG_ETH_FRAME_OFFS_TX_SIZE  0x14
 #define UDMA_REG_ETH_FRAME_OFFS_TX_CFG   0x18
@@ -51,6 +53,7 @@
 #define UDMA_REG_PTPTSRX_OFFS_RX_SADDR 0x00
 #define UDMA_REG_PTPTSRX_OFFS_RX_SIZE  0x04
 #define UDMA_REG_PTPTSRX_OFFS_RX_CFG   0x08
+#define UDMA_REG_PTPTSRX_OFFS_RX_WHOAMI 0x0C
 
 #define UDMA_REG_PTPTSRX_OFFS_RX_FIFO_CFG       0x1C
 #define UDMA_REG_PTPTSRX_OFFS_RX_FIFO_N         0x20
@@ -60,14 +63,62 @@
 /* PTP timestamp TX register addresses */
 #define UDMA_REG_PTPTSTX_ADDR_FIRST (ARCHI_SOC_PERIPHERALS_ADDR + ARCHI_UDMA_OFFSET + UDMA_FIRST_CHANNEL_OFFSET + (PER_ID_PTP_TS_TX)*0x80)
 
-#define UDMA_REG_PTPTSTX_OFFS_RX_SADDR 0x00
-#define UDMA_REG_PTPTSTX_OFFS_RX_SIZE  0x04
-#define UDMA_REG_PTPTSTX_OFFS_RX_CFG   0x08
+#define UDMA_REG_PTPTSTX_OFFS_RX_SADDR  0x00
+#define UDMA_REG_PTPTSTX_OFFS_RX_SIZE   0x04
+#define UDMA_REG_PTPTSTX_OFFS_RX_CFG    0x08
+#define UDMA_REG_PTPTSTX_OFFS_RX_WHOAMI 0x0C
+
 
 #define UDMA_REG_PTPTSTX_OFFS_RX_FIFO_CFG       0x1C
 #define UDMA_REG_PTPTSTX_OFFS_RX_FIFO_N         0x20
 
 #define UDMA_REG_PTPTSTX_RX_FIFO_FULL_BIT  0x02
+
+void test_regs() {
+
+  int reg_val;
+
+  /* registers of udma_eth_frame_reg */
+  /* WHOAMI reg */
+
+  reg_val = pulp_read32(UDMA_REG_ETH_FRAME_ADDR_FIRST + UDMA_REG_ETH_FRAME_OFFS_RX_SADDR);
+  reg_val = pulp_read32(UDMA_REG_ETH_FRAME_ADDR_FIRST + UDMA_REG_ETH_FRAME_OFFS_RX_SIZE);
+  reg_val = pulp_read32(UDMA_REG_ETH_FRAME_ADDR_FIRST + UDMA_REG_ETH_FRAME_OFFS_RX_CFG);
+
+  reg_val = pulp_read32(UDMA_REG_ETH_FRAME_ADDR_FIRST + UDMA_REG_ETH_FRAME_OFFS_WHOAMI);
+
+  reg_val = pulp_read32(UDMA_REG_ETH_FRAME_ADDR_FIRST + UDMA_REG_ETH_FRAME_OFFS_TX_SADDR);
+  reg_val = pulp_read32(UDMA_REG_ETH_FRAME_ADDR_FIRST + UDMA_REG_ETH_FRAME_OFFS_TX_SIZE);
+  reg_val = pulp_read32(UDMA_REG_ETH_FRAME_ADDR_FIRST + UDMA_REG_ETH_FRAME_OFFS_TX_CFG);
+
+  reg_val = pulp_read32(UDMA_REG_ETH_FRAME_ADDR_FIRST + UDMA_REG_ETH_FRAME_OFFS_RX_FIFO_CFG);
+  reg_val = pulp_read32(UDMA_REG_ETH_FRAME_ADDR_FIRST + UDMA_REG_ETH_FRAME_OFFS_RX_FIFO_N);
+  reg_val = pulp_read32(UDMA_REG_ETH_FRAME_ADDR_FIRST + UDMA_REG_ETH_FRAME_OFFS_RX_FIFO_FULL);
+
+  reg_val = pulp_read32(UDMA_REG_ETH_FRAME_ADDR_FIRST + UDMA_REG_ETH_FRAME_OFFS_TX_BYTES);
+  reg_val = pulp_read32(UDMA_REG_ETH_FRAME_ADDR_FIRST + UDMA_REG_ETH_FRAME_OFFS_TX_BYTES_LEFT);
+
+  /* registers of udma_ptp_ts_reg PTP TS of TX*/
+  reg_val = pulp_read32(UDMA_REG_PTPTSTX_ADDR_FIRST + UDMA_REG_PTPTSTX_OFFS_RX_SADDR);
+  reg_val = pulp_read32(UDMA_REG_PTPTSTX_ADDR_FIRST + UDMA_REG_PTPTSTX_OFFS_RX_SIZE);
+  reg_val = pulp_read32(UDMA_REG_PTPTSTX_ADDR_FIRST + UDMA_REG_PTPTSTX_OFFS_RX_CFG);
+
+  reg_val = pulp_read32(UDMA_REG_PTPTSTX_ADDR_FIRST + UDMA_REG_PTPTSTX_OFFS_RX_WHOAMI);
+
+  reg_val = pulp_read32(UDMA_REG_PTPTSTX_ADDR_FIRST + UDMA_REG_PTPTSTX_OFFS_RX_FIFO_CFG);
+  reg_val = pulp_read32(UDMA_REG_PTPTSTX_ADDR_FIRST + UDMA_REG_PTPTSTX_OFFS_RX_FIFO_N);
+
+  /* registers of udma_ptp_ts_reg PTP TS of RX*/
+  reg_val = pulp_read32(UDMA_REG_PTPTSRX_ADDR_FIRST + UDMA_REG_PTPTSRX_OFFS_RX_SADDR);
+  reg_val = pulp_read32(UDMA_REG_PTPTSRX_ADDR_FIRST + UDMA_REG_PTPTSRX_OFFS_RX_SIZE);
+  reg_val = pulp_read32(UDMA_REG_PTPTSRX_ADDR_FIRST + UDMA_REG_PTPTSRX_OFFS_RX_CFG);
+
+  reg_val = pulp_read32(UDMA_REG_PTPTSRX_ADDR_FIRST + UDMA_REG_PTPTSRX_OFFS_RX_WHOAMI);
+
+  reg_val = pulp_read32(UDMA_REG_PTPTSRX_ADDR_FIRST + UDMA_REG_PTPTSRX_OFFS_RX_FIFO_CFG);
+  reg_val = pulp_read32(UDMA_REG_PTPTSRX_ADDR_FIRST + UDMA_REG_PTPTSRX_OFFS_RX_FIFO_N);
+
+}
 
 
 uint32_t tx_buffer_size;
@@ -235,18 +286,28 @@ void send_dummy_eth_frame() {
   memcpy((void*)&tx_buffer[i], (void*)eth_type, 2);
   i += 2;
 
+  tx_buffer_size = 64;
   /* payload */
-  for (; i<32; i++) {
+  for (; i<tx_buffer_size; i++) {
     tx_buffer[i] = i;
   }
 
 
-  tx_buffer_size = 32;
 
   /* debug output; print buffer to uart */
-  for (int j = 0; j < 32; j++) {
+  for (int j = 0; j < tx_buffer_size; j++) {
     printf("tx_buffer[%d] = 0x%02X\n", j, tx_buffer[j]);
   }
+
+  printf("ETHERNET FRAME TX buffer; size: %d\n", tx_buffer_size);
+  /* debug output */
+  for (i = 0; i < tx_buffer_size; i++) {
+    if (i%8 == 0) {
+      printf("\n0x%04X    ", i);
+    }
+    printf("%02X ", tx_buffer[i]);
+  }
+  printf("\nEND OF FRAME\n\n");
 
   /* copy tx_buffer via udma to ethernet mac; submit size in bytes */
   enqueue_udma_tx(&tx_buffer, tx_buffer_size);
@@ -401,9 +462,11 @@ int main() {
   //printf("test printf\n");
 
   /* read dummy register */
-  int reg_val_whoami;
-  reg_val_whoami = pulp_read32(UDMA_REG_ETH_FRAME_ADDR_FIRST + 0xC);
+  //int reg_val_whoami;
+  //reg_val_whoami = pulp_read32(UDMA_REG_ETH_FRAME_ADDR_FIRST + 0xC);
   //printf("WHOAMI(reg 0x%02X): 0x%02X\n", UDMA_REG_ETH_FRAME_ADDR_FIRST + 0xC, reg_val_whoami);
+  /* test udma registers */
+  test_regs();
 
   // was used for debugging purposes
   //test_udma_reg();
